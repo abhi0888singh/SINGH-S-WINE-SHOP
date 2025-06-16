@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Singh's Wine Shop 🍷</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, sans-serif;
+      background: linear-gradient(135deg, #c31432, #240b36);
+      color: #fff;
+      overflow-x: hidden;
+    }
+    nav {
+      display: none;
+      background: rgba(0, 0, 0, 0.5);
+      text-align: center;
+      padding: 15px;
+    }
+    nav a {
+      color: #fff;
+      text-decoration: none;
+      margin: 0 20px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    nav a:hover {
+      text-decoration: underline;
+    }
+    .container {
+      max-width: 800px;
+      margin: 50px auto;
+      background: rgba(255,255,255,0.1);
+      padding: 30px;
+      border-radius: 12px;
+      backdrop-filter: blur(8px);
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+      display: none;
+    }
+    .container.active {
+      display: block;
+    }
+    h1, h2 {
+      text-align: center;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 12px;
+      text-align: left;
+    }
+    th {
+      background: #00000088;
+    }
+    input, select, textarea {
+      padding: 10px;
+      margin: 10px 0;
+      width: 100%;
+      border: none;
+      border-radius: 6px;
+    }
+    button {
+      padding: 10px 20px;
+      margin: 10px 10px 0 0;
+      background: #ff416c;
+      border: none;
+      color: #fff;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #ff4b2b;
+    }
+    footer {
+      text-align: center;
+      padding: 20px;
+      background: rgba(0, 0, 0, 0.5);
+      margin-top: 50px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- NAVIGATION -->
+  <nav id="navbar">
+    <a onclick="showPage('shop')">Shop</a>
+    <a onclick="showPage('cart')">Cart</a>
+    <a onclick="showPage('history')">History</a>
+    <a onclick="showPage('contact')">Contact</a>
+  </nav>
+
+  <!-- LOGIN PAGE -->
+  <div class="container active" id="login">
+    <h1>Login to Singh's Wine Shop 🍷</h1>
+    <input type="text" id="username" placeholder="Username">
+    <input type="password" id="password" placeholder="Password">
+    <button onclick="login()">Login</button>
+  </div>
+
+  <!-- SHOP PAGE -->
+  <div class="container" id="shop">
+    <h1>Available Items</h1>
+    <table id="itemsTable"></table>
+    <h2>Place Order</h2>
+    <label>Select Item:</label>
+    <select id="itemSelect"></select>
+    <label>Quantity:</label>
+    <input type="number" id="quantityInput" min="1" value="1">
+    <label>Your Email:</label>
+    <input type="email" id="emailInput" placeholder="you@example.com">
+    <div>
+      <button onclick="addToCart()">Add to Cart</button>
+      <button onclick="showPage('cart')">Go to Cart</button>
+      <button onclick="generateBill()">Generate Bill & Confirm</button>
+    </div>
+  </div>
+
+  <!-- CART PAGE -->
+  <div class="container" id="cart">
+    <h2>Your Cart</h2>
+    <div id="output">Cart is empty.</div>
+    <button onclick="showPage('shop')">Back to Shop</button>
+  </div>
+
+  <!-- HISTORY PAGE -->
+  <div class="container" id="history">
+    <h2>Order History</h2>
+    <div id="orderHistory">No past orders found.</div>
+    <button onclick="showOrderHistory()">Refresh History</button>
+  </div>
+
+  <!-- CONTACT PAGE -->
+  <div class="container" id="contact">
+    <h2>Contact Us</h2>
+    <form onsubmit="contactSubmit(event)">
+      <input type="text" placeholder="Your Name" required>
+      <input type="email" placeholder="Your Email" required>
+      <textarea placeholder="Your Message" rows="4" required></textarea>
+      <button type="submit">Send</button>
+    </form>
+  </div>
+
+  <!-- THANK YOU PAGE -->
+  <div class="container" id="thankyou">
+    <h2>Thank You!</h2>
+    <p>Your order is confirmed! Check your email. Drink responsibly 🍷</p>
+    <button onclick="showPage('shop')">Back to Shop</button>
+  </div>
+
+  <footer>
+    Website by Abhijeet Singh | Powered by ChatGPT | © 2025
+  </footer>
+
+  <script>
+    const validUsername = "admin";
+    const validPassword = "1234";
+
+    function login() {
+      const u = document.getElementById('username').value.trim();
+      const p = document.getElementById('password').value.trim();
+      if (u === validUsername && p === validPassword) {
+        alert("Login successful!");
+        document.getElementById('navbar').style.display = 'block';
+        showPage('shop');
+      } else {
+        alert("Invalid login. Try admin / 1234");
+      }
+    }
+
+    function showPage(id) {
+      document.querySelectorAll('.container').forEach(div => div.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      if (id === 'cart') viewCart();
+      if (id === 'history') showOrderHistory();
+    }
+
+    const items = {
+      "Black Dog": { price: 800, stock: 100 },
+      "McDowell's": { price: 750, stock: 100 },
+      "Budweiser": { price: 350, stock: 100 },
+      "Kingfisher": { price: 450, stock: 100 }
+    };
+    const cart = {};
+    const itemsTable = document.getElementById('itemsTable');
+    const itemSelect = document.getElementById('itemSelect');
+    const output = document.getElementById('output');
+    const orderHistoryDiv = document.getElementById('orderHistory');
+
+    function updateItemsTable() {
+      let html = `<tr><th>Item</th><th>Price (Rs.)</th><th>Stock</th></tr>`;
+      for (const [name, info] of Object.entries(items)) {
+        html += `<tr><td>${name}</td><td>${info.price}</td><td>${info.stock}</td></tr>`;
+      }
+      itemsTable.innerHTML = html;
+    }
+
+    function updateItemSelect() {
+      itemSelect.innerHTML = '';
+      for (const name in items) {
+        const opt = document.createElement('option');
+        opt.value = name;
+        opt.text = name;
+        itemSelect.appendChild(opt);
+      }
+    }
+
+    function addToCart() {
+      const item = itemSelect.value;
+      const qty = parseInt(document.getElementById('quantityInput').value);
+      if (qty <= 0 || isNaN(qty)) {
+        alert("Enter valid quantity.");
+        return;
+      }
+      if (qty > items[item].stock) {
+        alert("Not enough stock.");
+        return;
+      }
+      cart[item] = (cart[item] || 0) + qty;
+      items[item].stock -= qty;
+      saveCart();
+      updateItemsTable();
+      alert(`Added ${qty} ${item} to cart.`);
+    }
+
+    function viewCart() {
+      if (Object.keys(cart).length === 0) {
+        output.innerHTML = "Cart is empty.";
+        return;
+      }
+      let html = `<table><tr><th>Item</th><th>Qty</th><th>Price</th></tr>`;
+      let total = 0;
+      for (const [name, qty] of Object.entries(cart)) {
+        const price = qty * items[name].price;
+        total += price;
+        html += `<tr><td>${name}</td><td>${qty}</td><td>Rs.${price}</td></tr>`;
+      }
+      html += `</table><strong>Total: Rs.${total}</strong>`;
+      output.innerHTML = html;
+    }
+
+    function generateBill() {
+      const email = document.getElementById('emailInput').value.trim();
+      if (!email) {
+        alert("Enter your email.");
+        return;
+      }
+      if (Object.keys(cart).length === 0) {
+        alert("Cart is empty.");
+        return;
+      }
+      let total = 0;
+      const order = { items: [], total: 0 };
+      for (const [name, qty] of Object.entries(cart)) {
+        const price = qty * items[name].price;
+        total += price;
+        order.items.push({ name, qty, price });
+      }
+      order.total = total;
+      saveOrderHistory(order);
+      localStorage.removeItem('cart');
+      Object.keys(cart).forEach(k => delete cart[k]);
+      alert(`Confirmation sent to: ${email}`);
+      showPage('thankyou');
+    }
+
+    function showOrderHistory() {
+      const orders = JSON.parse(localStorage.getItem('orders')) || [];
+      if (orders.length === 0) {
+        orderHistoryDiv.innerHTML = "No past orders.";
+        return;
+      }
+      let html = "";
+      orders.forEach((order, idx) => {
+        html += `<h4>Order #${idx + 1}</h4><table><tr><th>Item</th><th>Qty</th><th>Price</th></tr>`;
+        order.items.forEach(i => {
+          html += `<tr><td>${i.name}</td><td>${i.qty}</td><td>Rs.${i.price}</td></tr>`;
+        });
+        html += `<tr><td colspan="2"><strong>Total</strong></td><td><strong>Rs.${order.total}</strong></td></tr></table>`;
+      });
+      orderHistoryDiv.innerHTML = html;
+    }
+
+    function contactSubmit(e) {
+      e.preventDefault();
+      alert("Thanks for contacting! We'll reply soon.");
+    }
+
+    function saveCart() {
+      localStorage.setItem('cart', JSON.stringify(cart));
+    }
+
+    function loadCart() {
+      const saved = JSON.parse(localStorage.getItem('cart'));
+      if (saved) {
+        for (const k in saved) cart[k] = saved[k];
+      }
+    }
+
+    function saveOrderHistory(order) {
+      const orders = JSON.parse(localStorage.getItem('orders')) || [];
+      orders.push(order);
+      localStorage.setItem('orders', JSON.stringify(orders));
+    }
+
+    loadCart();
+    updateItemsTable();
+    updateItemSelect();
+  </script>
+
+</body>
+</html>
